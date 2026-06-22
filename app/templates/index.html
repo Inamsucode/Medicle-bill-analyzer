@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Medical Billing Auditor</h1>
+  <div hx-get="/bills/upload" hx-trigger="load" hx-target="#upload-zone" hx-swap="outerHTML"></div>
+  <div id="upload-zone">Loading upload area...</div>
+  <div id="analysis-results"></div>
+{% endblock %}

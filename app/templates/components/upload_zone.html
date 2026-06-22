@@ -1,0 +1,7 @@
+<div id="upload-zone" class="upload-zone">
+  <form hx-post="/bills/upload" hx-target="#analysis-results" hx-swap="innerHTML" enctype="multipart/form-data">
+    <label for="bill-file">Drop your medical bill PDF here:</label>
+    <input id="bill-file" type="file" name="file" accept="application/pdf" />
+    <button type="submit">Upload &amp; Process</button>
+  </form>
+</div>
