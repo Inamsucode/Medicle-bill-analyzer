@@ -1,6 +1,7 @@
 import os
 import io
 import json
+import re
 import logging
 from typing import List
 from fastapi import FastAPI, Request, UploadFile, File
@@ -12,6 +13,17 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 import httpx
+
+# Try importing OCR libraries (optional - fail gracefully if not installed)
+try:
+    from pdf2image import convert_from_bytes
+    import pytesseract
+    OCR_AVAILABLE = True
+    logger_ocr = logging.getLogger(__name__)
+    logger_ocr.info("OCR libraries loaded successfully")
+except ImportError as e:
+    OCR_AVAILABLE = False
+    print(f"OCR libraries not available: {e}. Scanned PDFs will not work.")
 
 # Load environment variables
 load_dotenv()
@@ -112,10 +124,12 @@ openrouter_client = OpenRouterClient(
 )
 logger.info("OpenRouter client initialized successfully")
 
-# --- PDF Parser ---
+# --- Enhanced PDF Parser with OCR Support ---
+
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     """
-    Extract text from PDF using PyPDF.
+    Extract text from PDF using PyPDF with better error handling.
+    Attempts multiple extraction methods.
     """
     try:
         pdf_file = io.BytesIO(file_bytes)
@@ -125,20 +139,76 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
             raise ValueError("PDF has no pages")
         
         extracted_text = ""
-        for page in reader.pages:
-            text = page.extract_text()
-            if text:
-                extracted_text += text + "\n"
+        extraction_methods_used = []
         
-        if not extracted_text.strip():
-            raise ValueError("No text could be extracted from the PDF")
+        for page_num, page in enumerate(reader.pages, 1):
+            try:
+                # Method 1: Standard text extraction
+                text = page.extract_text()
+                if text and text.strip():
+                    extracted_text += text + "\n"
+                    if "standard" not in extraction_methods_used:
+                        extraction_methods_used.append("standard")
+                else:
+                    # Method 2: Try layout extraction mode (better for complex layouts)
+                    try:
+                        text = page.extract_text(extraction_mode="layout")
+                        if text and text.strip():
+                            extracted_text += text + "\n"
+                            if "layout" not in extraction_methods_used:
+                                extraction_methods_used.append("layout")
+                    except:
+                        pass
+            except Exception as e:
+                logger.warning(f"Error extracting page {page_num}: {str(e)}")
+                continue
         
-        logger.info(f"Extracted {len(extracted_text)} characters from PDF")
-        return extracted_text
+        if extracted_text.strip():
+            logger.info(f"Extracted {len(extracted_text)} characters from PDF using methods: {', '.join(extraction_methods_used)}")
+            return extracted_text
+        else:
+            # No text extracted - try OCR if available
+            if OCR_AVAILABLE:
+                logger.info("No text extracted with standard methods. Attempting OCR...")
+                return extract_text_with_ocr(file_bytes)
+            else:
+                raise ValueError("No text could be extracted from the PDF. The file may be scanned or image-based. Install pytesseract and pdf2image for OCR support.")
         
     except Exception as e:
         logger.error(f"PDF extraction failed: {str(e)}")
         raise ValueError(f"Failed to extract text from PDF: {str(e)}")
+
+def extract_text_with_ocr(file_bytes: bytes) -> str:
+    """
+    Extract text from scanned PDF using OCR.
+    Requires pytesseract and pdf2image to be installed.
+    """
+    if not OCR_AVAILABLE:
+        raise ValueError("OCR libraries (pytesseract, pdf2image) are not installed. Please install them for scanned PDF support.")
+    
+    try:
+        logger.info("Starting OCR extraction...")
+        
+        # Convert PDF to images
+        images = convert_from_bytes(file_bytes)
+        extracted_text = ""
+        
+        for i, image in enumerate(images):
+            logger.info(f"Performing OCR on page {i+1} of {len(images)}...")
+            # Perform OCR on each image
+            text = pytesseract.image_to_string(image)
+            if text.strip():
+                extracted_text += f"Page {i+1}:\n{text}\n\n"
+        
+        if not extracted_text.strip():
+            raise ValueError("OCR could not extract any text from the scanned PDF.")
+        
+        logger.info(f"OCR extraction successful: {len(extracted_text)} characters extracted from {len(images)} pages")
+        return extracted_text
+        
+    except Exception as e:
+        logger.error(f"OCR failed: {str(e)}")
+        raise ValueError(f"OCR extraction failed: {str(e)}")
 
 # --- OpenRouter Analysis ---
 async def analyze_with_openrouter(text: str) -> AuditResponse:
@@ -194,7 +264,6 @@ Be thorough and specific. The letter should be professional and persuasive."""
         # Parse JSON response
         try:
             # Try to extract JSON from the response
-            import re
             json_match = re.search(r'\{.*\}', content, re.DOTALL)
             if json_match:
                 json_str = json_match.group()
@@ -241,7 +310,8 @@ async def health_check():
     return {
         "status": "healthy",
         "model": settings.openrouter_model,
-        "debug": settings.debug
+        "debug": settings.debug,
+        "ocr_available": OCR_AVAILABLE
     }
 
 @app.post("/api/analysis/upload", response_class=HTMLResponse)
@@ -276,9 +346,23 @@ async def handle_upload(request: Request, file: UploadFile = File(...)):
         
         logger.info(f"Processing file: {file.filename} ({len(contents)} bytes)")
         
-        # Extract text from PDF
-        raw_text = extract_text_from_pdf(contents)
-        logger.info(f"Extracted {len(raw_text)} characters of text")
+        # Extract text from PDF with enhanced extraction and OCR fallback
+        try:
+            raw_text = extract_text_from_pdf(contents)
+            logger.info(f"Extracted {len(raw_text)} characters of text")
+        except Exception as e:
+            logger.error(f"Text extraction failed: {str(e)}")
+            return templates.TemplateResponse(
+                "components/error.html",
+                {"request": request, "error": f"Could not extract text from PDF: {str(e)}"}
+            )
+        
+        # Check if we got enough text
+        if len(raw_text.strip()) < 50:
+            return templates.TemplateResponse(
+                "components/error.html",
+                {"request": request, "error": "Not enough text could be extracted from the PDF. Please ensure the PDF contains readable text."}
+            )
         
         # Analyze with OpenRouter
         analysis_results = await analyze_with_openrouter(raw_text)
@@ -316,5 +400,3 @@ if __name__ == "__main__":
         port=8000,
         reload=settings.debug
     )
-
-    

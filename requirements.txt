@@ -10,3 +10,5 @@ pydantic-settings==2.1.0
 python-dotenv==1.0.0
 httpx==0.25.1
 aiofiles==23.2.1
+pytesseract
+pdf2image
