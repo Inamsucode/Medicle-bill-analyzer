@@ -1,7 +1,58 @@
-<div id="upload-zone" class="upload-zone">
-  <form hx-post="/bills/upload" hx-target="#analysis-results" hx-swap="innerHTML" enctype="multipart/form-data">
-    <label for="bill-file">Drop your medical bill PDF here:</label>
-    <input id="bill-file" type="file" name="file" accept="application/pdf" />
-    <button type="submit">Upload &amp; Process</button>
-  </form>
+<form hx-post="/api/analysis/upload" 
+      hx-encoding="multipart/form-data" 
+      hx-target="#workspace" 
+      hx-indicator="#loading-overlay"
+      hx-swap="innerHTML"
+      class="flex flex-col items-center justify-center border-2 border-dashed border-slate-700 hover:border-emerald-500/50 rounded-xl p-12 cursor-pointer bg-slate-950/40 transition-all duration-300 group">
+    
+    <input type="file" 
+           name="file" 
+           id="fileInput" 
+           class="hidden" 
+           onchange="this.form.requestSubmit()" 
+           accept=".pdf"/>
+    
+    <label for="fileInput" class="cursor-pointer text-center flex flex-col items-center w-full">
+        <!-- Icon -->
+        <div class="p-4 bg-slate-900 rounded-full border border-slate-800 group-hover:border-emerald-500/30 group-hover:bg-emerald-950/20 transition-all duration-300 mb-4">
+            <svg class="w-12 h-12 text-slate-400 group-hover:text-emerald-400 transition-colors duration-300" 
+                 fill="none" 
+                 stroke="currentColor" 
+                 viewBox="0 0 24 24">
+                <path stroke-linecap="round" 
+                      stroke-linejoin="round" 
+                      stroke-width="2" 
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+        </div>
+        
+        <!-- Text -->
+        <span class="text-xl font-bold text-slate-200">Upload Medical Bill</span>
+        <span class="text-sm text-slate-400 mt-1">
+            Drag and drop your PDF here, or 
+            <span class="text-emerald-400 group-hover:text-emerald-300 underline font-medium">
+                browse files
+            </span>
+        </span>
+        <span class="text-xs text-slate-600 mt-3 font-mono">
+            Supported: .pdf &bull; Max size: 10MB
+        </span>
+    </label>
+</form>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="htmx-indicator absolute inset-0 bg-slate-950/95 flex flex-col items-center justify-center backdrop-blur-sm transition-all duration-300 rounded-2xl">
+    <div class="relative w-16 h-16 mb-4">
+        <div class="absolute inset-0 rounded-full border-4 border-slate-800"></div>
+        <div class="absolute inset-0 rounded-full border-4 border-emerald-400 border-t-transparent animate-spin"></div>
+    </div>
+    <h4 class="text-lg font-bold text-white">Analyzing Your Bill</h4>
+    <p class="text-sm text-slate-400 mt-2 max-w-xs text-center">
+        AI is reviewing CPT codes, identifying discrepancies, and calculating potential savings...
+    </p>
+    <div class="mt-4 w-48 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div class="h-full bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full animate-pulse" 
+             style="width: 65%"></div>
+    </div>
+    <p class="text-xs text-slate-600 mt-3">This may take 15-30 seconds</p>
 </div>

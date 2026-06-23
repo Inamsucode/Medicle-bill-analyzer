@@ -1,16 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Medical Billing Auditor</title>
+    
+    <!-- Tailwind CSS -->
     <link rel="stylesheet" href="/static/css/output.css" />
-    <script src="https://unpkg.com/htmx.org@1.11.1"></script>
-    <script src="/static/js/main.js"></script>
-  </head>
-  <body>
-    <div class="container">
-      {% block content %}{% endblock %}
-    </div>
-  </body>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    
+    <!-- Custom JS -->
+    <script src="/static/js/main.js" defer></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen selection:bg-emerald-500/30 selection:text-emerald-300">
+    <!-- Main Content -->
+    {% block content %}{% endblock %}
+    
+    <!-- Footer -->
+    <footer class="text-center py-6 text-slate-600 text-sm border-t border-slate-800/50 mt-12">
+        <p>Medical Billing Auditor &bull; Powered by OpenRouter AI</p>
+        <p class="text-xs mt-1 text-slate-700">For educational purposes only.</p>
+    </footer>
+</body>
 </html>

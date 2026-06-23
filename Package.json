@@ -1,0 +1,14 @@
+{
+  "name": "medical-billing-auditor",
+  "version": "1.0.0",
+  "description": "AI-powered medical billing auditor",
+  "scripts": {
+    "build:css": "tailwindcss -i ./app/static/css/input.css -o ./app/static/css/output.css --minify",
+    "watch:css": "tailwindcss -i ./app/static/css/input.css -o ./app/static/css/output.css --watch",
+    "dev": "npm run watch:css & uvicorn app.main:app --reload",
+    "start": "npm run build:css && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.1"
+  }
+}

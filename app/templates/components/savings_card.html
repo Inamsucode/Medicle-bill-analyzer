@@ -1,5 +1,16 @@
-<section class="savings-card">
-  <h3>Estimated Savings</h3>
-  <p class="savings-amount">$1,250.00</p>
-  <p>Potential total savings from disputed charges.</p>
-</section>
+<div class="bg-gradient-to-br from-slate-950 to-slate-900 border border-emerald-500/30 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-inner relative overflow-hidden">
+    <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+    
+    <div>
+        <p class="text-xs font-bold uppercase tracking-widest text-emerald-400">Potential Savings</p>
+        <p class="text-4xl sm:text-5xl font-black text-white mt-1 tracking-tight">
+            ${{ "{:,.0f}".format(savings) if savings else "0" }}
+        </p>
+        <p class="text-sm text-slate-400 mt-0.5">Identified by AI audit</p>
+    </div>
+    
+    <a href="/" 
+       class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-sm font-semibold border border-slate-700/80 transition-all duration-200 shadow-lg whitespace-nowrap">
+        New Analysis
+    </a>
+</div>
