@@ -72,7 +72,7 @@ class OpenRouterClient:
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "http://localhost:8000",
+            "HTTP-Referer": "http://localhost:3000",
             "X-Title": "Medical Billing Auditor"
         }
     
