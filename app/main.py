@@ -1,4 +1,90 @@
 import os
+import sys
+from pathlib import Path
+from dotenv import load_dotenv
+
+# ============================================================
+# FORCE LOAD .env FROM PROJECT ROOT - ABSOLUTE PATH
+# ============================================================
+
+# Get the absolute path to the project root (where main.py is located)
+# This works regardless of where you run the script from
+script_dir = Path(__file__).parent.absolute()
+project_root = script_dir.parent.absolute()
+env_file = project_root / ".env"
+
+print("=" * 60)
+print("FORCE LOADING .env FILE")
+print("=" * 60)
+print(f"Script directory: {script_dir}")
+print(f"Project root: {project_root}")
+print(f"Looking for .env at: {env_file}")
+print(f".env exists: {env_file.exists()}")
+
+# FORCE LOAD: Try multiple methods to load .env
+env_loaded = False
+
+# Method 1: Load from absolute path
+if env_file.exists():
+    try:
+        with open(env_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+            print(f".env content preview: {content[:50]}...")
+        
+        load_dotenv(dotenv_path=str(env_file), override=True)
+        print(f"✅ Method 1: .env loaded from: {env_file}")
+        env_loaded = True
+    except Exception as e:
+        print(f"❌ Method 1 failed: {e}")
+
+# Method 2: Try loading from current directory
+if not env_loaded:
+    try:
+        load_dotenv(override=True)
+        if os.getenv("OPENROUTER_API_KEY"):
+            print(f"✅ Method 2: .env loaded from current directory: {os.getcwd()}")
+            env_loaded = True
+    except Exception as e:
+        print(f"❌ Method 2 failed: {e}")
+
+# Method 3: Try loading with explicit encoding
+if not env_loaded and env_file.exists():
+    try:
+        with open(env_file, 'r', encoding='utf-8-sig') as f:
+            for line in f:
+                if '=' in line and not line.startswith('#'):
+                    key, value = line.strip().split('=', 1)
+                    os.environ[key] = value
+                    print(f"✅ Set {key}={value[:15]}...")
+        env_loaded = True
+        print("✅ Method 3: .env loaded manually")
+    except Exception as e:
+        print(f"❌ Method 3 failed: {e}")
+
+# Verify API key is loaded
+API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+print("-" * 60)
+if API_KEY:
+    print(f"✅ API Key loaded: {API_KEY[:15]}...")
+else:
+    print("❌ API Key NOT loaded!")
+    print("\nPlease create .env file with:")
+    print("OPENROUTER_API_KEY=sk-or-v1-your-actual-key-here")
+    print("OPENROUTER_MODEL=openrouter/free")
+    print("OPENROUTER_BASE_URL=https://openrouter.ai/api/v1")
+    print("DEBUG=true")
+    print("\nOR create config.py file with:")
+    print("API_KEY = 'sk-or-v1-your-actual-key-here'")
+    print("=" * 60)
+    raise ValueError("OPENROUTER_API_KEY not found in .env file")
+
+print("=" * 60)
+
+# ============================================================
+# REST OF IMPORTS
+# ============================================================
+
 import io
 import json
 import re
@@ -11,7 +97,6 @@ from fastapi.templating import Jinja2Templates
 from pypdf import PdfReader
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
-from dotenv import load_dotenv
 import httpx
 
 # Try importing OCR libraries (optional - fail gracefully if not installed)
@@ -24,9 +109,6 @@ try:
 except ImportError as e:
     OCR_AVAILABLE = False
     print(f"OCR libraries not available: {e}. Scanned PDFs will not work.")
-
-# Load environment variables
-load_dotenv()
 
 # Setup logging
 logging.basicConfig(
@@ -45,11 +127,17 @@ class Settings(BaseSettings):
     
     class Config:
         env_file = ".env"
+        env_file_encoding = "utf-8"
         case_sensitive = False
 
-# Load settings - will raise error if OPENROUTER_API_KEY is missing
-settings = Settings()
-logger.info(f"Settings loaded. Using model: {settings.openrouter_model}")
+# Load settings - will use the .env we already loaded
+try:
+    settings = Settings()
+    logger.info(f"Settings loaded. Using model: {settings.openrouter_model}")
+    print(f"✅ Settings loaded successfully")
+except Exception as e:
+    logger.error(f"Failed to load settings: {e}")
+    raise
 
 # --- Data Models ---
 class FlaggedCode(BaseModel):
@@ -66,7 +154,7 @@ class AuditResponse(BaseModel):
 # --- Initialize FastAPI ---
 app = FastAPI(
     title="Medical Billing Auditor",
-    description="AI-powered medical billing audit using Mistral via OpenRouter",
+    description="AI-powered medical billing audit using OpenRouter",
     version="1.0.0"
 )
 
@@ -87,6 +175,7 @@ class OpenRouterClient:
             "HTTP-Referer": "http://localhost:8000",
             "X-Title": "Medical Billing Auditor"
         }
+        print(f"✅ OpenRouter client initialized with key: {api_key[:15]}...")
     
     async def chat_completion(self, model: str, messages: List[dict]) -> dict:
         """
@@ -117,7 +206,7 @@ class OpenRouterClient:
                 logger.error(f"OpenRouter request failed: {str(e)}")
                 raise
 
-# Initialize OpenRouter client (will fail if no API key)
+# Initialize OpenRouter client
 openrouter_client = OpenRouterClient(
     api_key=settings.openrouter_api_key,
     base_url=settings.openrouter_base_url
@@ -297,7 +386,21 @@ Be thorough and specific. The letter should be professional and persuasive."""
         logger.error(f"OpenRouter analysis failed: {str(e)}")
         raise Exception(f"AI analysis failed: {str(e)}")
 
-# --- Routes ---
+# ============================================================
+# ALL ROUTES
+# ============================================================
+
+@app.get("/debug/env")
+async def debug_env():
+    """Debug endpoint to check if environment variables are loading."""
+    return {
+        "openrouter_api_key_exists": bool(settings.openrouter_api_key),
+        "openrouter_api_key_preview": settings.openrouter_api_key[:15] + "..." if settings.openrouter_api_key else "MISSING",
+        "openrouter_model": settings.openrouter_model,
+        "openrouter_base_url": settings.openrouter_base_url,
+        "debug": settings.debug,
+        "ocr_available": OCR_AVAILABLE
+    }
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
@@ -391,7 +494,10 @@ async def handle_upload(request: Request, file: UploadFile = File(...)):
             {"request": request, "error": f"An error occurred: {str(e)}"}
         )
 
-# --- Run ---
+# ============================================================
+# RUN - This MUST be at the VERY END of the file
+# ============================================================
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
