@@ -17,7 +17,8 @@ A server-side FastAPI application for medical billing auditing with Jinja2 templ
 2. `.\.venv\Scripts\Activate.ps1`
 3. `pip install -r requirements.txt`
 4. `copy .env.example .env`
-5. `uvicorn app.main:app --reload`
+5. Set `OPENROUTER_API_KEY` and `OPENROUTER_MODEL=mistralai/mistral-7b-instruct:free` in your `.env`
+6. `uvicorn app.main:app --reload`
 
 ## Notes
 

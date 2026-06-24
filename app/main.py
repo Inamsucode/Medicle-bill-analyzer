@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 # --- Configuration ---
 class Settings(BaseSettings):
     openrouter_api_key: str = Field(..., env="OPENROUTER_API_KEY")
-    openrouter_model: str = Field("google/gemini-2.0-flash-lite-preview-02-05:free", env="OPENROUTER_MODEL")
+    openrouter_model: str = Field("mistralai/mistral-7b-instruct:free", env="OPENROUTER_MODEL")
     openrouter_base_url: str = Field("https://openrouter.ai/api/v1", env="OPENROUTER_BASE_URL")
     debug: bool = Field(False, env="DEBUG")
     max_file_size: int = Field(10 * 1024 * 1024)  # 10MB
@@ -66,7 +66,7 @@ class AuditResponse(BaseModel):
 # --- Initialize FastAPI ---
 app = FastAPI(
     title="Medical Billing Auditor",
-    description="AI-powered medical billing audit using OpenRouter",
+    description="AI-powered medical billing audit using Mistral via OpenRouter",
     version="1.0.0"
 )
 
