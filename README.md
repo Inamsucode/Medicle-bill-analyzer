@@ -198,7 +198,7 @@ text
 │  └─────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 🔑 API Key Setup
-Option A: .env File (Recommended)
+
 Create .env in the project root:
 
 env
@@ -210,8 +210,6 @@ OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 # Application Settings
 DEBUG=true
 MAX_FILE_SIZE=10485760
-Option B: config.py File
-Create config.py in the project root:
 
 
 🤖 AI Models
